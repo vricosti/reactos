@@ -105,20 +105,21 @@ typedef struct
 
 typedef struct
 {
-    ULONG        Magic;
-    USHORT        USAOffset;                    // Offset to the Update Sequence Array from the start of the ntfs record
-    USHORT        USACount;
-    ULONGLONG        LogSequenceNumber;
-    USHORT        SequenceNumber;
-    USHORT        LinkCount;
-    USHORT        AttributesOffset;
-    USHORT        Flags;
-    ULONG        BytesInUse;                    // Number of bytes used in this mft record.
-    ULONG        BytesAllocated;
-    ULONGLONG        BaseMFTRecord;
-    USHORT        NextAttributeInstance;
-    USHORT        Padding;                     // Align to 4 UCHAR boundary (NTFS 3.1+ (Windows XP and above))
-    ULONG        MFTRecordNumber;             // Number of this MFT Record (NTFS 3.1+ (Windows XP and above))
+    ULONG       Magic;
+    USHORT      USAOffset;                    // Offset to the Update Sequence Array from the start of the ntfs record
+    USHORT      USACount;
+    ULONGLONG   LogSequenceNumber;
+    USHORT      SequenceNumber;
+    USHORT      LinkCount;
+    USHORT      AttributesOffset;
+    USHORT      Flags;
+    ULONG       BytesInUse;                    // Number of bytes used in this mft record.
+    ULONG       BytesAllocated;
+    ULONGLONG   BaseMFTRecord;
+    USHORT      NextAttributeInstance;
+    USHORT      Padding;                     // Align to 4 UCHAR boundary (NTFS 3.1+ (Windows XP and above))
+    ULONG       MFTRecordNumber;             // Number of this MFT Record (NTFS 3.1+ (Windows XP and above))
+    USHORT      FixUps[];
 } NTFS_MFT_RECORD, *PNTFS_MFT_RECORD;
 
 typedef struct
@@ -150,7 +151,7 @@ typedef struct
             UCHAR        Reserved[4];
             LONGLONG        AllocatedSize;
             LONGLONG        DataSize;
-            LONGLONG        InitializedSize;
+            LONGLONG        ValidDataSize;
             LONGLONG        CompressedSize;
         } NonResident;
     };

@@ -237,7 +237,7 @@ typedef enum
 typedef struct
 {
     ULONG Type;             /* Magic number 'FILE' */
-    USHORT UsaOffset;       /* Offset to the update sequence */
+    USHORT UsaOffset;       /* Offset to the Update Sequence Array */
     USHORT UsaCount;        /* Size in words of Update Sequence Number & Array (S) */
     ULONGLONG Lsn;          /* $LogFile Sequence Number (LSN) */
 } NTFS_RECORD_HEADER, *PNTFS_RECORD_HEADER;
@@ -245,29 +245,41 @@ typedef struct
 /* NTFS_RECORD_HEADER.Type */
 #define NRH_FILE_TYPE  0x454C4946  /* 'FILE' */
 #define NRH_INDX_TYPE  0x58444E49  /* 'INDX' */
+#define NRH_CHKD_TYPE  0x444B4843  /* 'CHKD' */
+#define NRH_RSTR_TYPE  0x52545352  /* 'RSTR' */
+#define NRH_BAAD_TYPE  0x44414142  /* 'BAAD' */
+#define NRH_HOLE_TYPE  0x454C4F48  /* 'HOLE' */
+#define NRH_FFFF_TYPE  0xffffffff  /* 'FFFF' */
 
+typedef struct _MFT_REFERENCE {
+    ULONG LowPart;                                   
+    USHORT HighPart;                                  
+    USHORT SequenceNumber;
+} MFT_REFERENCE, *PMFT_REFERENCE;
+typedef MFT_REFERENCE FILE_REFERENCE, *PFILE_REFERENCE;
 
 typedef struct _FILE_RECORD_HEADER
 {
     NTFS_RECORD_HEADER Ntfs;
-    USHORT SequenceNumber;        /* Sequence number */
-    USHORT LinkCount;             /* Hard link count */
-    USHORT AttributeOffset;       /* Offset to the first Attribute */
-    USHORT Flags;                 /* Flags */
-    ULONG BytesInUse;             /* Real size of the FILE record */
-    ULONG BytesAllocated;         /* Allocated size of the FILE record */
-    ULONGLONG BaseFileRecord;     /* File reference to the base FILE record */
-    USHORT NextAttributeNumber;   /* Next Attribute Id */
-    USHORT Padding;               /* Align to 4 UCHAR boundary (XP) */
-    ULONG MFTRecordNumber;        /* Number of this MFT Record (XP) */
+    USHORT SequenceNumber;          /* 0x10: Sequence number */
+    USHORT LinkCount;               /* 0x12: Hard link count */
+    USHORT AttributeOffset;         /* 0x14: Offset to the first Attribute */
+    USHORT Flags;                   /* 0x16: Flags */
+    ULONG BytesInUse;               /* 0x18: Real size of the FILE record */
+    ULONG BytesAllocated;           /* 0x1C: Allocated size of the FILE record */
+    FILE_REFERENCE BaseFileRecord;  /* 0x20: File reference to the base FILE record */
+    USHORT NextAttributeNumber;     /* 0x28: Next Attribute Id */
+    USHORT Padding;                 /* 0x2A: High part of MFT record? */
+    ULONG MFTRecordNumber;          /* 0x2C: Number of this MFT Record */
+    USHORT FixUps[];                /* 0x30: FixUps? */
 } FILE_RECORD_HEADER, *PFILE_RECORD_HEADER;
 
 /* Flags in FILE_RECORD_HEADER */
 
-#define FRH_IN_USE    0x0001    /* Record is in use */
-#define FRH_DIRECTORY 0x0002    /* Record is a directory */
-#define FRH_UNKNOWN1  0x0004    /* Don't know */
-#define FRH_UNKNOWN2  0x0008    /* Don't know */
+#define FRH_IN_USE            0x0001    /* Record is in use */
+#define FRH_DIRECTORY         0x0002    /* Record is a directory (ie a file name index is present) */
+#define FRH_SYSTEM            0x0004    /* Record is a system file */
+#define FRH_IS_VIEW_INDEX     0x0008    /* Record contains one or more indices */
 
 typedef struct
 {
@@ -291,28 +303,29 @@ typedef struct
         // Non-resident attributes
         struct
         {
-            ULONGLONG        LowestVCN;
-            ULONGLONG        HighestVCN;
-            USHORT        MappingPairsOffset;
-            USHORT        CompressionUnit;
-            UCHAR        Reserved[4];
+            ULONGLONG       LowestVCN;
+            ULONGLONG       HighestVCN;
+            USHORT          MappingPairsOffset;
+            UCHAR           CompressionUnit;
+            UCHAR           Reserved[5];
             LONGLONG        AllocatedSize;
-            LONGLONG        DataSize;
-            LONGLONG        InitializedSize;
-            LONGLONG        CompressedSize;
+            LONGLONG        DataSize;       // 0x30
+            LONGLONG        ValidDataSize;  // 0x38: The size of valid part in bytes <= data_size.
+            LONGLONG        CompressedSize; // 0x40: This field is used for compressed file
         } NonResident;
     };
 } NTFS_ATTR_RECORD, *PNTFS_ATTR_RECORD;
 
 typedef struct
 {
-    ULONG Type;
-    USHORT Length;
-    UCHAR NameLength;
-    UCHAR NameOffset;
-    ULONGLONG StartingVCN;
-    ULONGLONG MFTIndex;
-    USHORT Instance;
+    ULONG Type;             // 0x00: The type of attribute.
+    USHORT Length;          // 0x04: The length of this record.
+    UCHAR NameLength;       // 0x06: The length of attribute name.
+    UCHAR NameOffset;       // 0x07: The offset to attribute name.
+    ULONGLONG StartingVCN;  // 0x08: Starting VCN of this attribute.
+    ULONGLONG MFTIndex;     // 0x10: MFT record number with attribute.
+    USHORT Instance;        // 0x18: struct ATTRIB ID.
+    WCHAR AttributeName[1]; // 0x01A: The name starts here
 } NTFS_ATTRIBUTE_LIST_ITEM, *PNTFS_ATTRIBUTE_LIST_ITEM;
 
 // The beginning and length of an attribute record are always aligned to an 8-byte boundary,
@@ -327,18 +340,18 @@ typedef struct
 
 typedef struct
 {
-    ULONGLONG CreationTime;
-    ULONGLONG ChangeTime;
-    ULONGLONG LastWriteTime;
-    ULONGLONG LastAccessTime;
-    ULONG FileAttribute;
-    ULONG AlignmentOrReserved[3];
-#if 0
-    ULONG QuotaId;
-    ULONG SecurityId;
-    ULONGLONG QuotaCharge;
-    USN Usn;
-#endif
+    ULONGLONG CreationTime;     // 0x00: File creation time.
+    ULONGLONG ChangeTime;       // 0x08: File modification time.
+    ULONGLONG LastWriteTime;    // 0x10: Last time any attribute was modified.
+    ULONGLONG LastAccessTime;   // 0x18: File last access time.
+    ULONG FileAttribute;        // 0x20: Standard DOS attributes & more.
+    ULONG MaximumVersions;	    // 0x24: Maximum Number of Versions.
+	ULONG VersionNumber;		// 0x28: Version Number.
+	ULONG ClassId;	            // 0x2C: Class Id.
+	ULONG OwnerId;	            // 0x30: Owner Id of the user owning the file.
+	ULONG SecurityId;	        // 0x34: The Security Id is a key in the $SII Index and $SDS.
+	ULONGLONG QuotaCharged;	    // 0x38: Quota associated to this file.
+	ULONGLONG Usn;              // 0x40: Last Update Sequence Number of the file.
 } STANDARD_INFORMATION, *PSTANDARD_INFORMATION;
 
 
@@ -351,7 +364,7 @@ typedef struct
     ULONGLONG StartVcn; // LowVcn
     ULONGLONG FileReferenceNumber;
     USHORT AttributeNumber;
-    USHORT AlignmentOrReserved[3];
+    WCHAR AttributeName[1];
 } ATTRIBUTE_LIST, *PATTRIBUTE_LIST;
 
 

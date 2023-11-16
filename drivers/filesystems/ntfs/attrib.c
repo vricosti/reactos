@@ -1709,8 +1709,8 @@ NtfsDumpAttribute(PDEVICE_EXTENSION Vcb,
         {
             FindRun(Attribute,0,&lcn, &runcount);
 
-            DbgPrint("  AllocatedSize %I64u  DataSize %I64u InitilizedSize %I64u\n",
-                     Attribute->NonResident.AllocatedSize, Attribute->NonResident.DataSize, Attribute->NonResident.InitializedSize);
+            DbgPrint("  AllocatedSize %I64u  DataSize %I64u ValidDataSize %I64u\n",
+                     Attribute->NonResident.AllocatedSize, Attribute->NonResident.DataSize, Attribute->NonResident.ValidDataSize);
             DbgPrint("  logical clusters: %I64u - %I64u\n",
                      lcn, lcn + runcount - 1);
         }

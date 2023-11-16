@@ -81,7 +81,7 @@ typedef struct
             UCHAR Reserved[4];
             LONGLONG AllocatedSize;
             LONGLONG DataSize;
-            LONGLONG InitializedSize;
+            LONGLONG ValidDataSize;
             LONGLONG CompressedSize;
         } NonResident;
     };

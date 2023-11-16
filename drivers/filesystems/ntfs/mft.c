@@ -837,11 +837,11 @@ SetNonResidentAttributeDataLength(PDEVICE_EXTENSION Vcb,
 
     AttrContext->pRecord->NonResident.AllocatedSize = AllocationSize;
     AttrContext->pRecord->NonResident.DataSize = DataSize->QuadPart;
-    AttrContext->pRecord->NonResident.InitializedSize = DataSize->QuadPart;
+    AttrContext->pRecord->NonResident.ValidDataSize = DataSize->QuadPart;
 
     DestinationAttribute->NonResident.AllocatedSize = AllocationSize;
     DestinationAttribute->NonResident.DataSize = DataSize->QuadPart;
-    DestinationAttribute->NonResident.InitializedSize = DataSize->QuadPart;
+    DestinationAttribute->NonResident.ValidDataSize = DataSize->QuadPart;
 
     // HighestVCN seems to be set incorrectly somewhere. Apply a hack-fix to reset it.
     // HACKHACK FIXME: Fix for sparse files; this math won't work in that case.
